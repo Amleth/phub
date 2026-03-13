@@ -1,9 +1,15 @@
 mod db;
 mod file;
 
-use crate::db::init_db;
+use rusqlite::Connection;
+use slint::{ModelRc, VecModel};
+
+use crate::db::{census_file, init_db, list_pdf_files};
 use crate::file::{hash_file, move_file};
+use std::error::Error;
 use std::{fs, io, path::PathBuf};
+
+slint::include_modules!();
 
 fn get_dirs() -> io::Result<(PathBuf, PathBuf, PathBuf)> {
     let documents = dirs::document_dir()
@@ -42,10 +48,35 @@ fn copy_in_pdf() -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
+fn census_files(path: &PathBuf, conn: &Connection) -> io::Result<()> {
+    for entry in fs::read_dir(&path)? {
+        let entry = entry?;
+        let path = entry.path();
+        let hash = path.file_stem().unwrap().to_string_lossy().to_string();
+        let _ = census_file(&conn, &hash);
+    }
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
     copy_in_pdf()?;
-    let (app_dir, _, _) = get_dirs()?;
+    let (app_dir, _, pdf_dir) = get_dirs()?;
     let db_path = app_dir.join("phub.sqlite");
-    let _conn = init_db(&db_path).expect("Failed to open DB");
+    let conn = init_db(&db_path).expect("Failed to open DB");
+    let _ = census_files(&pdf_dir, &conn)?;
+    let app = AppWindow::new()?;
+
+    let ui_pdfs: Vec<_> = list_pdf_files(&conn)?
+        .into_iter()
+        .map(|p| PdfFile {
+            title: p.title.into(),
+            hash: p.hash.into(),
+        })
+        .collect();
+
+    let model = VecModel::from(ui_pdfs);
+    app.set_pdfs(ModelRc::new(model));
+
+    app.run()?;
     Ok(())
 }

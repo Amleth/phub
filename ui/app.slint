@@ -1,0 +1,17 @@
+import { ListView } from "std-widgets.slint";
+
+export struct PdfFile {
+    title: string,
+    hash: string,
+}
+
+export component AppWindow inherits Window {
+    in property <[PdfFile]> pdfs;
+    width: 400px;
+    height: 200px;
+    ListView {
+        for pdf in pdfs: Text {
+            text: pdf.title + " (" + pdf.hash + ")";
+        }
+    }
+}
