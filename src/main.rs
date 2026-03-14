@@ -1,11 +1,15 @@
 mod db;
 mod file;
+mod pdf;
+mod pdf_slint;
 
 use rusqlite::Connection;
 use slint::{ModelRc, VecModel};
 
 use crate::db::{census_file, init_db, list_pdf_files};
 use crate::file::{hash_file, move_file};
+use crate::pdf::render_pdf_page;
+use crate::pdf_slint::image_to_slint;
 use std::error::Error;
 use std::{fs, io, path::PathBuf};
 
@@ -66,6 +70,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let _ = census_files(&pdf_dir, &conn)?;
     let app = AppWindow::new()?;
 
+    let img = render_pdf_page("/Users/amleth/Documents/PHUB/pdf/29a12a034dc5c9acd06dd8491eeb9cb5eba5255da81c9a56ba1dbf90ecee8634.pdf");
+    let slint_img = image_to_slint(img);
+
     let ui_pdfs: Vec<_> = list_pdf_files(&conn)?
         .into_iter()
         .map(|p| PdfFile {
@@ -76,6 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let model = VecModel::from(ui_pdfs);
     app.set_pdfs(ModelRc::new(model));
+    app.set_pdf_page(slint_img);
 
     app.run()?;
     Ok(())

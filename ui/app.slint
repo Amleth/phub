@@ -7,11 +7,19 @@ export struct PdfFile {
 
 export component AppWindow inherits Window {
     in property <[PdfFile]> pdfs;
-    width: 400px;
+    in property <image> pdf_page;
+
+    width: 800px;
     height: 200px;
     ListView {
         for pdf in pdfs: Text {
-            text: pdf.title + " (" + pdf.hash + ")";
+            text: pdf.hash;
         }
+    }
+
+    Image {
+        source: pdf_page;
+        width: 800px;
+        height: 1000px;
     }
 }
